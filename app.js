@@ -5,6 +5,8 @@ const state = {
 const lineForm = document.querySelector('#line-form');
 const timelinesEl = document.querySelector('#timelines');
 const template = document.querySelector('#timeline-template');
+const overviewSelectorEl = document.querySelector('#overview-selector');
+const overviewCanvasEl = document.querySelector('#overview-canvas');
 
 const formatDate = (value) => (value ? new Date(`${value}T00:00:00`).toLocaleDateString('es-ES') : '');
 
@@ -14,6 +16,92 @@ const sortItems = (items) => {
     const bDate = b.type === 'period' ? b.startDate : b.date;
     return aDate.localeCompare(bDate);
   });
+};
+
+const selectedOverviewLines = new Set();
+
+const escapeHtml = (value) =>
+  String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+
+const renderOverviewItem = (item) => {
+  const dateLabel =
+    item.type === 'event'
+      ? `Fecha: ${formatDate(item.date)}`
+      : `${formatDate(item.startDate)} → ${formatDate(item.endDate)}`;
+
+  return `
+    <li class="timeline-item ${escapeHtml(item.type)}">
+      <h5>${escapeHtml(item.title)}</h5>
+      <time>${escapeHtml(dateLabel)}</time>
+      ${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}
+    </li>
+  `;
+};
+
+const renderOverview = () => {
+  const lines = state.lines;
+
+  lines.forEach((line) => {
+    if (!selectedOverviewLines.has(line.id)) {
+      selectedOverviewLines.add(line.id);
+    }
+  });
+
+  [...selectedOverviewLines].forEach((lineId) => {
+    if (!lines.some((line) => line.id === lineId)) {
+      selectedOverviewLines.delete(lineId);
+    }
+  });
+
+  overviewSelectorEl.innerHTML = '';
+  lines.forEach((line) => {
+    const label = document.createElement('label');
+    label.className = 'overview-chip';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selectedOverviewLines.has(line.id);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) selectedOverviewLines.add(line.id);
+      else selectedOverviewLines.delete(line.id);
+      renderOverview();
+    });
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = line.color;
+
+    const text = document.createElement('span');
+    text.textContent = line.name;
+
+    label.append(checkbox, dot, text);
+    overviewSelectorEl.appendChild(label);
+  });
+
+  const visible = lines.filter((line) => selectedOverviewLines.has(line.id));
+  if (visible.length === 0) {
+    overviewCanvasEl.innerHTML = '<p class="overview-empty">Selecciona una o varias líneas para mostrarlas aquí.</p>';
+    return;
+  }
+
+  overviewCanvasEl.innerHTML = visible
+    .map((line) => {
+      const trackItems = sortItems(line.items).map(renderOverviewItem).join('');
+      return `
+        <article class="overview-line">
+          <h4>${escapeHtml(line.name)}</h4>
+          <ol class="overview-track ${escapeHtml(line.orientation)}" style="--line-color:${escapeHtml(line.color)}">
+            ${trackItems || '<li class="timeline-item"><p>Sin elementos todavía.</p></li>'}
+          </ol>
+        </article>
+      `;
+    })
+    .join('');
 };
 
 const saveState = () => {
@@ -254,6 +342,8 @@ const render = () => {
 
     timelinesEl.appendChild(fragment);
   });
+
+  renderOverview();
 };
 
 lineForm.addEventListener('submit', (event) => {
