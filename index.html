@@ -1,292 +1,132 @@
-:root {
-  color-scheme: light;
-  --bg: #f4f6fb;
-  --panel: #ffffff;
-  --text: #1f2937;
-  --muted: #6b7280;
-  --border: #dbe3ef;
-}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Editor de Time Lines</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <h1>Editor de Time Lines Multitema</h1>
+      <p>
+        Crea varias líneas de tiempo por tema, cambia su color, alterna vista
+        horizontal/vertical y añade eventos o periodos editables.
+      </p>
+    </header>
 
-* {
-  box-sizing: border-box;
-  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-}
+    <main class="layout">
+      <section class="panel creator-panel">
+        <h2>Nueva línea de tiempo</h2>
+        <form id="line-form" class="stack-form">
+          <label>
+            Nombre de la línea
+            <input name="name" type="text" placeholder="Ej: Historia del Arte" required />
+          </label>
+          <label>
+            Color de la línea
+            <input name="color" type="color" value="#2563eb" />
+          </label>
+          <label>
+            Vista inicial
+            <select name="orientation">
+              <option value="horizontal">Horizontal (izquierda → derecha)</option>
+              <option value="vertical">Vertical</option>
+            </select>
+          </label>
+          <button type="submit">Crear línea</button>
+        </form>
+      </section>
 
-body {
-  margin: 0;
-  color: var(--text);
-  background: var(--bg);
-}
+      <section class="panel overview-panel">
+        <h2>Vista general (multilínea)</h2>
+        <p>
+          Selecciona qué líneas quieres ver simultáneamente en un panel grande.
+        </p>
+        <div id="overview-selector" class="overview-selector"></div>
+        <div id="overview-canvas" class="overview-canvas"></div>
+      </section>
 
-.page-header {
-  padding: 1.5rem 1rem;
-  text-align: center;
-}
+      <section id="timelines" class="timelines"></section>
+    </main>
 
-.page-header h1 {
-  margin: 0;
-}
+    <template id="timeline-template">
+      <article class="timeline-card">
+        <header class="timeline-header">
+          <div>
+            <h3 class="timeline-title"></h3>
+            <p class="timeline-subtitle"></p>
+          </div>
+          <div class="timeline-actions">
+            <label>
+              Color
+              <input class="line-color-input" type="color" />
+            </label>
+            <label>
+              Vista
+              <select class="orientation-select">
+                <option value="horizontal">Horizontal</option>
+                <option value="vertical">Vertical</option>
+              </select>
+            </label>
+            <button class="remove-line-btn" type="button">Eliminar línea</button>
+          </div>
+        </header>
 
-.layout {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
+        <div class="adders">
+          <form class="item-form event-form">
+            <h4>Añadir evento</h4>
+            <label>
+              Título
+              <input name="title" type="text" required />
+            </label>
+            <label>
+              Fecha
+              <input name="date" type="date" required />
+            </label>
+            <label>
+              Descripción
+              <textarea name="description" rows="2" placeholder="Detalles del evento"></textarea>
+            </label>
+            <label>
+              URL de imagen
+              <input name="image" type="url" placeholder="https://..." />
+            </label>
+            <label>
+              Link de referencia
+              <input name="link" type="url" placeholder="https://..." />
+            </label>
+            <button type="submit">Guardar evento</button>
+          </form>
 
-.panel,
-.timeline-card {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1rem;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-}
+          <form class="item-form period-form">
+            <h4>Añadir periodo</h4>
+            <label>
+              Nombre del periodo
+              <input name="title" type="text" required />
+            </label>
+            <label>
+              Fecha inicio
+              <input name="startDate" type="date" required />
+            </label>
+            <label>
+              Fecha fin
+              <input name="endDate" type="date" required />
+            </label>
+            <label>
+              Descripción
+              <textarea name="description" rows="2" placeholder="Contexto del periodo"></textarea>
+            </label>
+            <button type="submit">Guardar periodo</button>
+          </form>
+        </div>
 
-.stack-form,
-.item-form {
-  display: grid;
-  gap: 0.6rem;
-}
+        <div class="track-wrap">
+          <ol class="timeline-track"></ol>
+        </div>
+      </article>
+    </template>
 
-label {
-  display: grid;
-  gap: 0.25rem;
-  font-size: 0.9rem;
-}
-
-input,
-textarea,
-select,
-button {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 0.55rem 0.65rem;
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-  background: #2563eb;
-  color: #fff;
-  font-weight: 600;
-}
-
-button:hover {
-  filter: brightness(1.06);
-}
-
-.timeline-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.timeline-title {
-  margin: 0;
-}
-
-.timeline-subtitle {
-  margin: 0;
-  color: var(--muted);
-}
-
-.timeline-actions {
-  display: flex;
-  align-items: end;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.timelines {
-  display: grid;
-  gap: 1rem;
-}
-
-.adders {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.85rem;
-}
-
-.overview-panel p {
-  margin-top: 0.2rem;
-  color: var(--muted);
-}
-
-.overview-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin: 0.6rem 0 0.9rem;
-}
-
-.overview-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.35rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  font-size: 0.86rem;
-}
-
-.overview-chip .dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-}
-
-.overview-canvas {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #fbfdff;
-  min-height: 240px;
-  padding: 0.75rem;
-  display: grid;
-  gap: 0.9rem;
-}
-
-.overview-empty {
-  color: var(--muted);
-  font-style: italic;
-}
-
-.overview-line {
-  border: 1px dashed #cfd8ea;
-  background: #fff;
-  border-radius: 10px;
-  padding: 0.6rem;
-}
-
-.overview-line h4 {
-  margin: 0 0 0.45rem;
-}
-
-.overview-track {
-  list-style: none;
-  margin: 0;
-  padding: 0.8rem;
-  display: flex;
-  gap: 0.8rem;
-  overflow: auto;
-}
-
-.overview-track.horizontal {
-  border-top: 10px solid var(--line-color);
-}
-
-.overview-track.vertical {
-  border-left: 10px solid var(--line-color);
-  flex-direction: column;
-}
-
-.timeline-item.period {
-  box-shadow: inset 0 0 0 2px rgba(8, 145, 178, 0.25);
-}
-
-.track-wrap {
-  margin-top: 1rem;
-  overflow: auto;
-}
-
-.timeline-track {
-  --line-color: #2563eb;
-  list-style: none;
-  margin: 0;
-  padding: 1rem;
-  display: flex;
-  gap: 1rem;
-  min-height: 180px;
-}
-
-.timeline-track.horizontal {
-  border-top: 10px solid var(--line-color);
-  flex-direction: row;
-  align-items: flex-start;
-}
-
-.timeline-track.vertical {
-  border-left: 10px solid var(--line-color);
-  flex-direction: column;
-  min-height: 0;
-}
-
-.timeline-item {
-  background: #f8fbff;
-  border: 1px solid #d8e3ff;
-  border-radius: 10px;
-  padding: 0.7rem;
-  min-width: 220px;
-  max-width: 280px;
-}
-
-.timeline-item.period {
-  background: #ecfeff;
-  border-color: #bae6fd;
-}
-
-.timeline-item h5 {
-  margin: 0 0 0.35rem;
-  font-size: 1rem;
-}
-
-.timeline-item p {
-  margin: 0.2rem 0;
-  color: #334155;
-  font-size: 0.9rem;
-}
-
-.timeline-item time {
-  display: block;
-  color: #0f172a;
-  font-weight: 600;
-}
-
-.item-links {
-  display: grid;
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.item-links a {
-  color: #1d4ed8;
-  text-decoration: none;
-}
-
-.item-links a:hover {
-  text-decoration: underline;
-}
-
-.item-buttons {
-  margin-top: 0.5rem;
-  display: flex;
-  gap: 0.4rem;
-}
-
-.item-buttons button {
-  background: #0ea5e9;
-  padding: 0.45rem 0.6rem;
-}
-
-.item-buttons .delete {
-  background: #dc2626;
-}
-
-@media (max-width: 740px) {
-  .timeline-track.horizontal {
-    flex-direction: column;
-    border-top: none;
-    border-left: 10px solid var(--line-color);
-  }
-
-  .overview-track.horizontal {
-    flex-direction: column;
-    border-top: none;
-    border-left: 10px solid var(--line-color);
-  }
-}
+    <script src="app.js"></script>
+  </body>
+</html>
