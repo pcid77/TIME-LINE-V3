@@ -38,6 +38,67 @@
         </form>
       </section>
 
+      <section class="panel global-editor-panel">
+        <h2>Menú único para cargar elementos</h2>
+        <p>Selecciona una línea y añade un evento o un periodo sin entrar en cada tarjeta.</p>
+
+        <div class="global-forms">
+          <form id="global-event-form" class="item-form">
+            <h4>Añadir evento</h4>
+            <label>
+              Línea destino
+              <select name="lineId" class="line-target-select" required></select>
+            </label>
+            <label>
+              Título
+              <input name="title" type="text" required />
+            </label>
+            <label>
+              Fecha
+              <input name="date" type="date" required />
+            </label>
+            <label>
+              Descripción
+              <textarea name="description" rows="2" placeholder="Detalles del evento"></textarea>
+            </label>
+            <label>
+              URL de imagen
+              <input name="image" type="url" placeholder="https://..." />
+            </label>
+            <label>
+              Link de referencia
+              <input name="link" type="url" placeholder="https://..." />
+            </label>
+            <button type="submit">Guardar evento</button>
+          </form>
+
+          <form id="global-period-form" class="item-form">
+            <h4>Añadir periodo</h4>
+            <label>
+              Línea destino
+              <select name="lineId" class="line-target-select" required></select>
+            </label>
+            <label>
+              Nombre del periodo
+              <input name="title" type="text" required />
+            </label>
+            <label>
+              Fecha inicio
+              <input name="startDate" type="date" required />
+            </label>
+            <label>
+              Fecha fin
+              <input name="endDate" type="date" required />
+            </label>
+            <label>
+              Descripción
+              <textarea name="description" rows="2" placeholder="Contexto del periodo"></textarea>
+            </label>
+            <button type="submit">Guardar periodo</button>
+          </form>
+        </div>
+      </section>
+
       <section class="panel overview-panel">
         <h2>Vista general (multilínea)</h2>
         <p>
@@ -72,54 +133,6 @@
             <button class="remove-line-btn" type="button">Eliminar línea</button>
           </div>
         </header>
-
-        <div class="adders">
-          <form class="item-form event-form">
-            <h4>Añadir evento</h4>
-            <label>
-              Título
-              <input name="title" type="text" required />
-            </label>
-            <label>
-              Fecha
-              <input name="date" type="date" required />
-            </label>
-            <label>
-              Descripción
-              <textarea name="description" rows="2" placeholder="Detalles del evento"></textarea>
-            </label>
-            <label>
-              URL de imagen
-              <input name="image" type="url" placeholder="https://..." />
-            </label>
-            <label>
-              Link de referencia
-              <input name="link" type="url" placeholder="https://..." />
-            </label>
-            <button type="submit">Guardar evento</button>
-          </form>
-
-          <form class="item-form period-form">
-            <h4>Añadir periodo</h4>
-            <label>
-              Nombre del periodo
-              <input name="title" type="text" required />
-            </label>
-            <label>
-              Fecha inicio
-              <input name="startDate" type="date" required />
-            </label>
-            <label>
-              Fecha fin
-              <input name="endDate" type="date" required />
-            </label>
-            <label>
-              Descripción
-              <textarea name="description" rows="2" placeholder="Contexto del periodo"></textarea>
-            </label>
-            <button type="submit">Guardar periodo</button>
-          </form>
-        </div>
 
         <div class="track-wrap">
           <ol class="timeline-track"></ol>
