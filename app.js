@@ -3,6 +3,8 @@ const state = {
 };
 
 const lineForm = document.querySelector('#line-form');
+const globalEventForm = document.querySelector('#global-event-form');
+const globalPeriodForm = document.querySelector('#global-period-form');
 const timelinesEl = document.querySelector('#timelines');
 const template = document.querySelector('#timeline-template');
 const overviewSelectorEl = document.querySelector('#overview-selector');
@@ -20,90 +22,6 @@ const sortItems = (items) => {
 
 const selectedOverviewLines = new Set();
 
-const escapeHtml = (value) =>
-  String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
-
-const renderOverviewItem = (item) => {
-  const dateLabel =
-    item.type === 'event'
-      ? `Fecha: ${formatDate(item.date)}`
-      : `${formatDate(item.startDate)} → ${formatDate(item.endDate)}`;
-
-  return `
-    <li class="timeline-item ${escapeHtml(item.type)}">
-      <h5>${escapeHtml(item.title)}</h5>
-      <time>${escapeHtml(dateLabel)}</time>
-      ${item.description ? `<p>${escapeHtml(item.description)}</p>` : ''}
-    </li>
-  `;
-};
-
-const renderOverview = () => {
-  const lines = state.lines;
-
-  lines.forEach((line) => {
-    if (!selectedOverviewLines.has(line.id)) {
-      selectedOverviewLines.add(line.id);
-    }
-  });
-
-  [...selectedOverviewLines].forEach((lineId) => {
-    if (!lines.some((line) => line.id === lineId)) {
-      selectedOverviewLines.delete(lineId);
-    }
-  });
-
-  overviewSelectorEl.innerHTML = '';
-  lines.forEach((line) => {
-    const label = document.createElement('label');
-    label.className = 'overview-chip';
-
-    const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.checked = selectedOverviewLines.has(line.id);
-    checkbox.addEventListener('change', () => {
-      if (checkbox.checked) selectedOverviewLines.add(line.id);
-      else selectedOverviewLines.delete(line.id);
-      renderOverview();
-    });
-
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    dot.style.background = line.color;
-
-    const text = document.createElement('span');
-    text.textContent = line.name;
-
-    label.append(checkbox, dot, text);
-    overviewSelectorEl.appendChild(label);
-  });
-
-  const visible = lines.filter((line) => selectedOverviewLines.has(line.id));
-  if (visible.length === 0) {
-    overviewCanvasEl.innerHTML = '<p class="overview-empty">Selecciona una o varias líneas para mostrarlas aquí.</p>';
-    return;
-  }
-
-  overviewCanvasEl.innerHTML = visible
-    .map((line) => {
-      const trackItems = sortItems(line.items).map(renderOverviewItem).join('');
-      return `
-        <article class="overview-line">
-          <h4>${escapeHtml(line.name)}</h4>
-          <ol class="overview-track ${escapeHtml(line.orientation)}" style="--line-color:${escapeHtml(line.color)}">
-            ${trackItems || '<li class="timeline-item"><p>Sin elementos todavía.</p></li>'}
-          </ol>
-        </article>
-      `;
-    })
-    .join('');
-};
-
 const saveState = () => {
   localStorage.setItem('timelines-v1', JSON.stringify(state.lines));
 };
@@ -119,6 +37,39 @@ const loadState = () => {
   } catch {
     state.lines = [];
   }
+};
+
+const updateGlobalLineTargets = () => {
+  const selects = document.querySelectorAll('.line-target-select');
+  selects.forEach((select) => {
+    const current = select.value;
+    select.innerHTML = '';
+
+    if (state.lines.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'Primero crea una línea';
+      select.appendChild(option);
+      select.disabled = true;
+      return;
+    }
+
+    select.disabled = false;
+    state.lines.forEach((line) => {
+      const option = document.createElement('option');
+      option.value = line.id;
+      option.textContent = line.name;
+      select.appendChild(option);
+    });
+
+    if (state.lines.some((line) => line.id === current)) {
+      select.value = current;
+    }
+  });
+
+  const hasLines = state.lines.length > 0;
+  globalEventForm.querySelector('button[type="submit"]').disabled = !hasLines;
+  globalPeriodForm.querySelector('button[type="submit"]').disabled = !hasLines;
 };
 
 const openEditDialog = (lineId, itemId) => {
@@ -158,6 +109,11 @@ const openEditDialog = (lineId, itemId) => {
     const description = prompt('Descripción:', item.description ?? '');
     if (description === null) return;
 
+    if (endDate < startDate) {
+      alert('La fecha final del periodo no puede ser anterior al inicio.');
+      return;
+    }
+
     Object.assign(item, {
       title: title.trim(),
       startDate: startDate.trim(),
@@ -170,19 +126,48 @@ const openEditDialog = (lineId, itemId) => {
   render();
 };
 
-const renderItem = (item, lineId) => {
+const addItemActionButtons = (container, lineId, itemId) => {
+  const buttons = document.createElement('div');
+  buttons.className = 'item-buttons';
+
+  const editBtn = document.createElement('button');
+  editBtn.type = 'button';
+  editBtn.textContent = 'Editar';
+  editBtn.addEventListener('click', () => openEditDialog(lineId, itemId));
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.type = 'button';
+  deleteBtn.className = 'delete';
+  deleteBtn.textContent = 'Eliminar';
+  deleteBtn.addEventListener('click', () => {
+    const line = state.lines.find((entry) => entry.id === lineId);
+    if (!line) return;
+    line.items = line.items.filter((entry) => entry.id !== itemId);
+    saveState();
+    render();
+  });
+
+  buttons.append(editBtn, deleteBtn);
+  container.appendChild(buttons);
+};
+
+const renderLineNameInsideTrack = (lineName) => {
+  const marker = document.createElement('li');
+  marker.className = 'line-name-marker';
+  marker.textContent = lineName;
+  return marker;
+};
+
+const renderEventItem = (item, lineId) => {
   const li = document.createElement('li');
-  li.className = `timeline-item ${item.type}`;
+  li.className = 'timeline-item event';
 
   const title = document.createElement('h5');
   title.textContent = item.title;
   li.appendChild(title);
 
   const dateText = document.createElement('time');
-  dateText.textContent =
-    item.type === 'event'
-      ? `Fecha: ${formatDate(item.date)}`
-      : `${formatDate(item.startDate)} → ${formatDate(item.endDate)}`;
+  dateText.textContent = `Fecha: ${formatDate(item.date)}`;
   li.appendChild(dateText);
 
   if (item.description) {
@@ -191,7 +176,7 @@ const renderItem = (item, lineId) => {
     li.appendChild(desc);
   }
 
-  if (item.type === 'event' && (item.image || item.link)) {
+  if (item.image || item.link) {
     const linksBox = document.createElement('div');
     linksBox.className = 'item-links';
 
@@ -225,30 +210,138 @@ const renderItem = (item, lineId) => {
     li.appendChild(linksBox);
   }
 
-  const buttons = document.createElement('div');
-  buttons.className = 'item-buttons';
+  addItemActionButtons(li, lineId, item.id);
+  return li;
+};
 
-  const editBtn = document.createElement('button');
-  editBtn.type = 'button';
-  editBtn.textContent = 'Editar';
-  editBtn.addEventListener('click', () => openEditDialog(lineId, item.id));
+const renderPeriodBar = (item, lineId) => {
+  const li = document.createElement('li');
+  li.className = 'timeline-period-bar';
 
-  const deleteBtn = document.createElement('button');
-  deleteBtn.type = 'button';
-  deleteBtn.className = 'delete';
-  deleteBtn.textContent = 'Eliminar';
-  deleteBtn.addEventListener('click', () => {
-    const line = state.lines.find((entry) => entry.id === lineId);
-    if (!line) return;
-    line.items = line.items.filter((entry) => entry.id !== item.id);
-    saveState();
-    render();
+  const name = document.createElement('span');
+  name.className = 'period-name';
+  name.textContent = item.title;
+
+  const dates = document.createElement('span');
+  dates.className = 'period-dates';
+  dates.textContent = `${formatDate(item.startDate)} → ${formatDate(item.endDate)}`;
+
+  li.append(name, dates);
+
+  if (item.description) {
+    const desc = document.createElement('p');
+    desc.className = 'period-description';
+    desc.textContent = item.description;
+    li.appendChild(desc);
+  }
+
+  addItemActionButtons(li, lineId, item.id);
+  return li;
+};
+
+const renderTrackItems = (track, line) => {
+  track.appendChild(renderLineNameInsideTrack(line.name));
+
+  sortItems(line.items).forEach((item) => {
+    if (item.type === 'period') {
+      track.appendChild(renderPeriodBar(item, line.id));
+      return;
+    }
+    track.appendChild(renderEventItem(item, line.id));
+  });
+};
+
+const renderOverview = () => {
+  state.lines.forEach((line) => {
+    if (!selectedOverviewLines.has(line.id)) {
+      selectedOverviewLines.add(line.id);
+    }
   });
 
-  buttons.append(editBtn, deleteBtn);
-  li.appendChild(buttons);
+  [...selectedOverviewLines].forEach((lineId) => {
+    if (!state.lines.some((line) => line.id === lineId)) {
+      selectedOverviewLines.delete(lineId);
+    }
+  });
 
-  return li;
+  overviewSelectorEl.innerHTML = '';
+  state.lines.forEach((line) => {
+    const label = document.createElement('label');
+    label.className = 'overview-chip';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selectedOverviewLines.has(line.id);
+    checkbox.addEventListener('change', () => {
+      if (checkbox.checked) selectedOverviewLines.add(line.id);
+      else selectedOverviewLines.delete(line.id);
+      renderOverview();
+    });
+
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    dot.style.background = line.color;
+
+    const text = document.createElement('span');
+    text.textContent = line.name;
+
+    label.append(checkbox, dot, text);
+    overviewSelectorEl.appendChild(label);
+  });
+
+  const visible = state.lines.filter((line) => selectedOverviewLines.has(line.id));
+  if (visible.length === 0) {
+    overviewCanvasEl.innerHTML = '<p class="overview-empty">Selecciona una o varias líneas para mostrarlas aquí.</p>';
+    return;
+  }
+
+  overviewCanvasEl.innerHTML = '';
+
+  visible.forEach((line) => {
+    const article = document.createElement('article');
+    article.className = 'overview-line';
+
+    const title = document.createElement('h4');
+    title.textContent = line.name;
+    article.appendChild(title);
+
+    const track = document.createElement('ol');
+    track.className = `overview-track ${line.orientation}`;
+    track.style.setProperty('--line-color', line.color);
+
+    const marker = document.createElement('li');
+    marker.className = 'line-name-marker';
+    marker.textContent = line.name;
+    track.appendChild(marker);
+
+    sortItems(line.items).forEach((item) => {
+      const li = document.createElement('li');
+      li.className = item.type === 'period' ? 'timeline-period-bar compact' : 'timeline-item compact';
+
+      const titleEl = document.createElement('h5');
+      titleEl.textContent = item.title;
+      li.appendChild(titleEl);
+
+      const date = document.createElement('time');
+      date.textContent =
+        item.type === 'event'
+          ? `Fecha: ${formatDate(item.date)}`
+          : `${formatDate(item.startDate)} → ${formatDate(item.endDate)}`;
+      li.appendChild(date);
+
+      track.appendChild(li);
+    });
+
+    if (line.items.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'timeline-item compact';
+      empty.textContent = 'Sin elementos todavía.';
+      track.appendChild(empty);
+    }
+
+    article.appendChild(track);
+    overviewCanvasEl.appendChild(article);
+  });
 };
 
 const render = () => {
@@ -262,8 +355,6 @@ const render = () => {
     const colorInput = fragment.querySelector('.line-color-input');
     const orientationSelect = fragment.querySelector('.orientation-select');
     const removeBtn = fragment.querySelector('.remove-line-btn');
-    const eventForm = fragment.querySelector('.event-form');
-    const periodForm = fragment.querySelector('.period-form');
     const track = fragment.querySelector('.timeline-track');
 
     titleEl.textContent = line.name;
@@ -274,9 +365,7 @@ const render = () => {
     track.style.setProperty('--line-color', line.color);
     track.classList.add(line.orientation);
 
-    sortItems(line.items).forEach((item) => {
-      track.appendChild(renderItem(item, line.id));
-    });
+    renderTrackItems(track, line);
 
     colorInput.addEventListener('input', (event) => {
       line.color = event.target.value;
@@ -296,53 +385,10 @@ const render = () => {
       render();
     });
 
-    eventForm.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const formData = new FormData(event.currentTarget);
-
-      line.items.push({
-        id: crypto.randomUUID(),
-        type: 'event',
-        title: String(formData.get('title')).trim(),
-        date: String(formData.get('date')),
-        description: String(formData.get('description') ?? '').trim(),
-        image: String(formData.get('image') ?? '').trim(),
-        link: String(formData.get('link') ?? '').trim(),
-      });
-
-      event.currentTarget.reset();
-      saveState();
-      render();
-    });
-
-    periodForm.addEventListener('submit', (event) => {
-      event.preventDefault();
-      const formData = new FormData(event.currentTarget);
-      const startDate = String(formData.get('startDate'));
-      const endDate = String(formData.get('endDate'));
-
-      if (endDate < startDate) {
-        alert('La fecha final del periodo no puede ser anterior al inicio.');
-        return;
-      }
-
-      line.items.push({
-        id: crypto.randomUUID(),
-        type: 'period',
-        title: String(formData.get('title')).trim(),
-        startDate,
-        endDate,
-        description: String(formData.get('description') ?? '').trim(),
-      });
-
-      event.currentTarget.reset();
-      saveState();
-      render();
-    });
-
     timelinesEl.appendChild(fragment);
   });
 
+  updateGlobalLineTargets();
   renderOverview();
 };
 
@@ -359,6 +405,67 @@ lineForm.addEventListener('submit', (event) => {
   });
 
   event.currentTarget.reset();
+  saveState();
+  render();
+});
+
+globalEventForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const lineId = String(formData.get('lineId'));
+  const line = state.lines.find((entry) => entry.id === lineId);
+  if (!line) {
+    alert('Debes seleccionar una línea válida.');
+    return;
+  }
+
+  line.items.push({
+    id: crypto.randomUUID(),
+    type: 'event',
+    title: String(formData.get('title')).trim(),
+    date: String(formData.get('date')),
+    description: String(formData.get('description') ?? '').trim(),
+    image: String(formData.get('image') ?? '').trim(),
+    link: String(formData.get('link') ?? '').trim(),
+  });
+
+  const keepLineId = lineId;
+  event.currentTarget.reset();
+  event.currentTarget.querySelector('select[name="lineId"]').value = keepLineId;
+  saveState();
+  render();
+});
+
+globalPeriodForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const formData = new FormData(event.currentTarget);
+  const lineId = String(formData.get('lineId'));
+  const line = state.lines.find((entry) => entry.id === lineId);
+  if (!line) {
+    alert('Debes seleccionar una línea válida.');
+    return;
+  }
+
+  const startDate = String(formData.get('startDate'));
+  const endDate = String(formData.get('endDate'));
+
+  if (endDate < startDate) {
+    alert('La fecha final del periodo no puede ser anterior al inicio.');
+    return;
+  }
+
+  line.items.push({
+    id: crypto.randomUUID(),
+    type: 'period',
+    title: String(formData.get('title')).trim(),
+    startDate,
+    endDate,
+    description: String(formData.get('description') ?? '').trim(),
+  });
+
+  const keepLineId = lineId;
+  event.currentTarget.reset();
+  event.currentTarget.querySelector('select[name="lineId"]').value = keepLineId;
   saveState();
   render();
 });
