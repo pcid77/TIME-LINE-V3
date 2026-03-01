@@ -72,6 +72,11 @@ button {
   font-weight: 600;
 }
 
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 button:hover {
   filter: brightness(1.06);
 }
@@ -105,16 +110,16 @@ button:hover {
   gap: 1rem;
 }
 
-.adders {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.85rem;
-}
-
+.global-editor-panel p,
 .overview-panel p {
   margin-top: 0.2rem;
   color: var(--muted);
+}
+
+.global-forms {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
 }
 
 .overview-selector {
@@ -167,34 +172,13 @@ button:hover {
   margin: 0 0 0.45rem;
 }
 
-.overview-track {
-  list-style: none;
-  margin: 0;
-  padding: 0.8rem;
-  display: flex;
-  gap: 0.8rem;
-  overflow: auto;
-}
-
-.overview-track.horizontal {
-  border-top: 10px solid var(--line-color);
-}
-
-.overview-track.vertical {
-  border-left: 10px solid var(--line-color);
-  flex-direction: column;
-}
-
-.timeline-item.period {
-  box-shadow: inset 0 0 0 2px rgba(8, 145, 178, 0.25);
-}
-
 .track-wrap {
   margin-top: 1rem;
   overflow: auto;
 }
 
-.timeline-track {
+.timeline-track,
+.overview-track {
   --line-color: #2563eb;
   list-style: none;
   margin: 0;
@@ -204,16 +188,28 @@ button:hover {
   min-height: 180px;
 }
 
-.timeline-track.horizontal {
-  border-top: 10px solid var(--line-color);
-  flex-direction: row;
+.timeline-track.horizontal,
+.overview-track.horizontal {
+  border-top: 12px solid var(--line-color);
   align-items: flex-start;
 }
 
-.timeline-track.vertical {
-  border-left: 10px solid var(--line-color);
+.timeline-track.vertical,
+.overview-track.vertical {
+  border-left: 12px solid var(--line-color);
   flex-direction: column;
   min-height: 0;
+}
+
+.line-name-marker {
+  background: var(--line-color);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.35rem 0.75rem;
+  align-self: center;
+  white-space: nowrap;
 }
 
 .timeline-item {
@@ -222,12 +218,7 @@ button:hover {
   border-radius: 10px;
   padding: 0.7rem;
   min-width: 220px;
-  max-width: 280px;
-}
-
-.timeline-item.period {
-  background: #ecfeff;
-  border-color: #bae6fd;
+  max-width: 300px;
 }
 
 .timeline-item h5 {
@@ -245,6 +236,35 @@ button:hover {
   display: block;
   color: #0f172a;
   font-weight: 600;
+}
+
+.timeline-period-bar {
+  min-width: 280px;
+  max-width: 380px;
+  background: color-mix(in srgb, var(--line-color) 23%, #ffffff);
+  border: 2px solid color-mix(in srgb, var(--line-color) 60%, #0f172a 20%);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  display: grid;
+  gap: 0.2rem;
+  position: relative;
+}
+
+.period-name {
+  text-align: center;
+  font-weight: 700;
+}
+
+.period-dates {
+  text-align: center;
+  font-size: 0.82rem;
+  color: #1f2937;
+}
+
+.period-description {
+  margin: 0.2rem 0 0;
+  font-size: 0.86rem;
+  text-align: center;
 }
 
 .item-links {
@@ -266,27 +286,34 @@ button:hover {
   margin-top: 0.5rem;
   display: flex;
   gap: 0.4rem;
+  justify-content: center;
+  flex-wrap: wrap;
 }
 
 .item-buttons button {
   background: #0ea5e9;
-  padding: 0.45rem 0.6rem;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.82rem;
 }
 
 .item-buttons .delete {
   background: #dc2626;
 }
 
-@media (max-width: 740px) {
-  .timeline-track.horizontal {
-    flex-direction: column;
-    border-top: none;
-    border-left: 10px solid var(--line-color);
-  }
+.compact {
+  min-width: 180px;
+  max-width: 240px;
+}
 
+@media (max-width: 740px) {
+  .timeline-track.horizontal,
   .overview-track.horizontal {
     flex-direction: column;
     border-top: none;
-    border-left: 10px solid var(--line-color);
+    border-left: 12px solid var(--line-color);
+  }
+
+  .timeline-period-bar {
+    min-width: 220px;
   }
 }
